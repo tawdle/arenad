@@ -1,0 +1,33 @@
+extends ../layout
+
+head
+  block head
+
+block content
+  h1 New Goal
+
+  form(role="form", action="/games/#{game_id}/goals", method="post")
+
+    .team
+      .checkbox
+        label(for="team-home")
+          input#team-home(type="checkbox", name="goal[team]", value="0")
+          | Home Team
+      .checkbox
+        label(for="team-visiting")
+          input#team-visiting(type="checkbox", name="goal[team]", value="1")
+          | Visiting Team
+
+    .form-group
+      label(for="period") Period
+      input.form-control#period(type="text" name="goal[period]")
+
+    .form-group
+      label(for="goal-id") Goal ID
+      input.form-control#goal-id(type="text", name="goal[id]")
+
+    .form-group
+      label(for="goal-time") Time
+      input.form-control#goal-time(type="text", name="goal[time]")
+
+    input(type="submit")

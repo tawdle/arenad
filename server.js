@@ -1,55 +1,69 @@
-var express = require("express");
-var fs = require("fs");
-var net = require("net");
-var server = express();
+var express = require("express"),
+    http = require("http"),
+    net = require("net"),
+    url = require("url"),
+    fs = require("fs");
 
-server.get("/hello.txt", function(req, res) {
-  res.send("Hello world!");
+var app = express();
+
+app.configure(function() {
+  app.set('views', __dirname + '/views');
+  app.set('view engine', 'jade');
+  //app.use(express.cookieParser());
+  //app.use(express.session({ secret: 'secret goes here' }));
+  app.use(express.bodyParser());
+  app.use(app.router);
+  //app.use(express.csrf());
+  app.use(express.static(__dirname + '/public'));
 });
 
-function copyFile(source, target, cb) {
-  var cbCalled = false;
-
-  var rd = fs.createReadStream(source);
-  rd.on("error", function(err) {
-    done(err);
-  });
-  var wr = fs.createWriteStream(target);
-  wr.on("error", function(err) {
-    done(err);
-  });
-  wr.on("close", function(ex) {
-    console.log("received close event\n");
-    done();
-  });
-  rd.pipe(wr);
-
-  function done(err) {
-    if (!cbCalled) {
-      cb(err);
-      cbCalled = true;
-    }
-  }
-}
-
-server.get("/cam0.mp4", function(req, res) {
+app.post("/games/:game_id/goals", function(req, res) {
+  console.log(req.body);
+  var fileName = __dirname + "/public/videos/games/" + req.params.game_id + "/goal-" + req.body.goal.id + ".mp4";
   var socket = new net.Socket({ readable: true, writeable: true });
   socket
   .on("error", function(err) {
-    res.send("We got an error: " + err);
+    console.log("we got an error: " + err);
+    res.end("We got an error: " + err);
   })
   .on("close", function(err) {
-    if (err) throw "socket closed with error " + err;
+    console.log("socket closed");
   })
   .connect(2000, function(err) {
-    socket.write("replay -60 30\n", "UTF-8", function(err) {
-      if (err) throw "error sending to socket: " + err;
-      res.writeHead(200, "Here's that replay you requested", { 'Content-Type': 'video/mp4' });
-      socket.pipe(res);
+    console.log("connected to camera source");
+    socket.setEncoding("utf8");
+    socket.write("replay " + /* req.body.goal.time || */ (Date.now() - 20000) + " 10000 " + fileName + "\n", "utf8", function(err) {
+      if (err) {
+        console.log("error writing to camsrc");
+        res.end("error writing to camsrc");
+        return;
+      }
+
+      console.log("request sent to camera source");
+
+      var json = "";
+
+      socket
+      .on("data", function(chunk) {
+        json += chunk;
+      })
+      .on("end", function() {
+        console.log("We got result from camera source: " + json);
+        socket.end();
+        var result = JSON.parse(json);
+        res.json(result);
+      });
     });
   });
 });
 
-server.listen(4000);
+app.get("/games/:game_id/goals/new", function(req, res) {
+  res.render("goals/new.jade", { game_id: req.params.game_id }, function(err, html) {
+    if (err) res.end("error rendering template: " + err);
+    else res.end(html);
+  });
+});
+
+app.listen(4000);
 console.log("Listening on port 4000");
 
