@@ -1,0 +1,11 @@
+{
+  "serverName": "Todd's MacBook Pro",
+  "command": "/Users/todd/proj/camsrc/camsrc",
+  "cameras": [
+    { "args": [ "-p", "2000"], "port": 2000, "side": "home",     "position": "goal" },
+    { "args": [ "-p", "2001"], "port": 2001, "side": "home",     "position": "side" },
+    { "args": [ "-p", "2002"], "port": 2002, "side": "visiting", "position": "side" },
+    { "args": [ "-p", "2003"], "port": 2003, "side": "visiting", "position": "goal" }
+  ]
+}
+
