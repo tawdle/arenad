@@ -115,14 +115,14 @@ app.post("/games/:game_id/goals", cors(), function(req, res) {
 
   var shots = goalToShots(goal);
   var fileNames = shots.map(shotToFileName);
-  var playlist = shots.map(function(shot) { return shotToPlayList(shot, req.headers.host); });
+  var playlist = shots.map(function(shot) { return shotToPlaylist(shot, req.headers.host); });
 
-  if (fileNames.all(function(fileName) { return fs.existsSync(fileName); })) {
+  if (fileNames.every(function(fileName) { return fs.existsSync(fileName); })) {
     res.json( { playlist: playlist });
   } else {
     var count = shots.length;
 
-    shots.each(function(shot) {
+    shots.forEach(function(shot) {
       getVideo(shot, function(err, json) {
         if (err) {
           res.send(500, "error: " + err);
