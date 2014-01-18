@@ -1,6 +1,6 @@
 {
   "serverName": "Beaupré",
-  "command": "/Users/todd/proj/camsrc/camsrc",
+  "command": "/home/todd/proj/camsrc/camsrc",
   "cameras": [
     { "args": [ "-d", "0"], "port": 2000, "side": "home",     "position": "goal" },
     { "args": [ "-d", "1"], "port": 2001, "side": "home",     "position": "side" },
