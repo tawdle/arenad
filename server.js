@@ -85,12 +85,12 @@ function goalToSide(goal) {
 }
 
 function goalToShots(goal) {
-  const SECS = 1000;
+  var SECS = 1000;
   var goalTime = new Date(goal.created_at).getTime();
   var side = goalToSide(goal);
 
   var first =  { goal: goal, position: "side", port: cameras[side].side.port, start: goalTime - 8 * SECS, duration: 10 * SECS, speed: 0.90 };
-  var second = { goal: goal, position: "goal", port: cameras[side].goal.port, start: goalTime - 5 * SECS, duration:  6 * SECS, speed: 0.75 };
+  var second = { goal: goal, position: "goal", port: cameras[side].goal.port, start: goalTime - 8 * SECS, duration: 10 * SECS, speed: 0.75 };
 
   return [first, second];
 }
