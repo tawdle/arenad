@@ -67,7 +67,7 @@ function getVideo(shot, next) {
 }
 
 function fileNameToUrl(fileName, host) {
-  return fileName.replace(/^(.*public)/, "//" + host);
+  return fileName.replace(/^(.*public)/, "http://" + host);
 }
 
 function sideToBinary(side) {
