@@ -81,7 +81,7 @@ function binaryToSide(bin) {
 function goalToSide(goal) {
   // In the 0th period, the interesting side is the one opposite the team that scored.
   // And it alternates every period.
-  return binaryToSide(sideToBinary(goal.side) ^ (Number(goal.period) % 1) ^ 1);
+  return binaryToSide(sideToBinary(goal.side) ^ (Number(goal.period) % 2) ^ 1);
 }
 
 function goalToShots(goal) {
