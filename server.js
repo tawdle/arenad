@@ -146,8 +146,15 @@ app.get("/games/:game_id/goals/new", function(req, res) {
 });
 
 var config;
-var camsrcs = [];
+var children = [];
 var cameras = {};
+
+process.on('exit', function() {
+  console.log('exit signalled, killing', children.length, 'child processes');
+  children.forEach(function(child) {
+    child.kill();
+  });
+});
 
 function processConfigFile(name) {
   config = JSON.parse(fs.readFileSync("config/" + name + ".json", "utf8"));
@@ -163,9 +170,10 @@ function processConfigFile(name) {
     });
     camsrc.on("exit", function(err) {
       console.log("camsrc exit: " + err);
+      throw err;
     });
 
-    camsrcs.push(camsrc);
+    children.push(camsrc);
 
     cameras[camera.side] = cameras[camera.side] || {};
     cameras[camera.side][camera.position] = camera;
