@@ -170,7 +170,7 @@ function processConfigFile(name) {
     });
     camsrc.on("exit", function(err) {
       console.log("camsrc exit: " + err);
-      throw err;
+      throw "camera exited unexpectedly";
     });
 
     children.push(camsrc);
