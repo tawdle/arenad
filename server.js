@@ -20,12 +20,31 @@ app.configure(function() {
   app.use(express.static(__dirname + '/public'));
 });
 
+var filesInProgress = [];
+
 function getVideo(shot, next) {
+  var fileName = shotToFileName(shot);
+
+  if (filesInProgress.indexOf(fileName) >= 0) {
+    next("currently producing requested video");
+    return;
+  }
+
+  filesInProgress.push(fileName);
+
+  function done(err, arg) {
+    var index = filesInProgress.indexOf(shotToFileName(shot));
+    if (index >= 0) {
+      filesInProgress.splice(index, 1);
+    }
+    next(err, arg);
+  }
+
   var socket = new net.Socket({ readable: true, writeable: true });
   socket
   .on("error", function(err) {
     console.log("socket error: " + err);
-    next(err);
+    done(err);
     return;
   })
   .on("close", function(err) {
@@ -34,10 +53,10 @@ function getVideo(shot, next) {
   .connect(shot.port, function(err) {
     console.log("connected to camera source on port " + shot.port);
     socket.setEncoding("utf8");
-    socket.write("replay " + shot.start + " " + shot.duration + " " + shotToFileName(shot) + "\n", "utf8", function(err) {
+    socket.write("replay " + shot.start + " " + shot.duration + " " + fileName + "\n", "utf8", function(err) {
       if (err) {
         console.log("error writing to camsrc");
-        next(err);
+        done(err);
         return;
       }
 
@@ -54,11 +73,11 @@ function getVideo(shot, next) {
         socket.end();
         try {
           var result = JSON.parse(json);
-          next(null, result);
+          done(null, result);
           return;
         } catch(e) {
           console.log("error parsing json response");
-          next("error processing json response");
+          done("error processing json response");
           return;
         }
       });
@@ -108,41 +127,67 @@ function shotToPlaylist(shot, host) {
   return { file: shotToUrl(shot, host), speed: shot.speed };
 }
 
+function goalToShotsFileNamesAndPlaylist(goal, host) {
+  var shots = goalToShots(goal),
+      fileNames = shots.map(shotToFileName),
+      playlist = shots.map(function(shot) { return shotToPlaylist(shot, host); });
+
+  return {
+    shots: shots,
+    fileNames: fileNames,
+    playlist: playlist
+  };
+}
+
+
+function filesBeingProduced(fileNames) {
+  return fileNames.some(function(fileName) { return filesInProgress.indexOf(fileName) >= 0; });
+}
+
+function filesExist(fileNames) {
+  return fileNames.every(function(fileName) { return fs.existsSync(fileName); });
+}
 
 app.post("/games/:game_id/goals", cors(), function(req, res) {
+
+  console.log("processing post request");
+
   var goal = req.body.goal;
   goal.game_id = req.params.game_id;
 
-  var shots = goalToShots(goal);
-  var fileNames = shots.map(shotToFileName);
-  var playlist = shots.map(function(shot) { return shotToPlaylist(shot, req.headers.host); });
+  var data = goalToShotsFileNamesAndPlaylist(goal, req.headers.host);
 
-  if (fileNames.every(function(fileName) { return fs.existsSync(fileName); })) {
-    res.json( { playlist: playlist });
+  if (filesExist(data.fileNames) && !filesBeingProduced(data.fileNames)) {
+    console.log("sending playlist for already-existing files");
+    res.json( { playlist: data.playlist });
+    return;
   } else {
-    var count = shots.length;
+    if (req.connection.remoteAddress != "127.0.0.1") {
+      res.send(403, "Production requests accepted only from localhost");
+      return;
+    }
 
-    shots.forEach(function(shot) {
+    var count = data.shots.length;
+    var error = false;
+
+    data.shots.forEach(function(shot) {
+      if (error) return;
+
       getVideo(shot, function(err, json) {
         if (err) {
-          res.send(500, "error: " + err);
+          res.send(err == "currently producing requested video" ? 503 : 500, "error: " + err);
+          error = true;
           return;
         }
         count -=1;
-        if (count <= 0) {
-          res.json( { playlist: playlist });
+        if (count <= 0 && !error) {
+          console.log("sending complete playlist");
+          res.json( { playlist: data.playlist });
           return;
         }
       });
     });
   }
-});
-
-app.get("/games/:game_id/goals/new", function(req, res) {
-  res.render("goals/new.jade", { game_id: req.params.game_id }, function(err, html) {
-    if (err) res.end("error rendering template: " + err);
-    else res.end(html);
-  });
 });
 
 var config;
